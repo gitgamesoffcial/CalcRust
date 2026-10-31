@@ -1,13 +1,15 @@
-name: Compile and Publish Public Releases
+name: Compile and Publish Public Downloads
 
 on:
   push:
-    tags:
-      - 'v*' # Triggers the build automatically whenever you push a tag like v1.0.0
+    branches: [ "main" ] # Triggers instantly on normal pushes
+
+permissions:
+  contents: write # Grants the runner explicit permission to publish files
 
 jobs:
   build:
-    name: Build Binary for ${{ matrix.os }}
+    name: Build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -33,15 +35,17 @@ jobs:
     - name: Compile Release Binary
       run: cargo build --release --verbose
 
-    - name: Rename executable for clarity
+    - name: Prepare Executable
       run: |
         cd target/release
         mv ${{ matrix.artifact_name }} ${{ matrix.asset_name }}
       shell: bash
 
-    - name: Upload to Public Release
+    - name: Upload to Public Release Page
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: latest
+        name: Latest Compiled Builds
+        draft: false
+        prerelease: false
         files: target/release/${{ matrix.asset_name }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
