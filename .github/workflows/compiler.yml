@@ -1,16 +1,27 @@
-name: Compile Rust Executables
+name: Compile and Publish Public Releases
 
 on:
   push:
-    branches: [ "main" ]
+    tags:
+      - 'v*' # Triggers the build automatically whenever you push a tag like v1.0.0
 
 jobs:
-  compile:
+  build:
     name: Build Binary for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            artifact_name: calcrust.exe
+            asset_name: calcrust-windows.exe
+          - os: ubuntu-latest
+            artifact_name: calcrust
+            asset_name: calcrust-linux
+          - os: macos-latest
+            artifact_name: calcrust
+            asset_name: calcrust-macos
 
     steps:
     - name: Checkout repository
@@ -22,23 +33,15 @@ jobs:
     - name: Compile Release Binary
       run: cargo build --release --verbose
 
-    - name: Upload Windows Executable
-      if: matrix.os == 'windows-latest'
-      uses: actions/upload-artifact@v4
-      with:
-        name: calcrust-windows
-        path: target/release/calcrust.exe
+    - name: Rename executable for clarity
+      run: |
+        cd target/release
+        mv ${{ matrix.artifact_name }} ${{ matrix.asset_name }}
+      shell: bash
 
-    - name: Upload Linux Executable
-      if: matrix.os == 'ubuntu-latest'
-      uses: actions/upload-artifact@v4
+    - name: Upload to Public Release
+      uses: softprops/action-gh-release@v2
       with:
-        name: calcrust-linux
-        path: target/release/calcrust
-
-    - name: Upload macOS Executable
-      if: matrix.os == 'macos-latest'
-      uses: actions/upload-artifact@v4
-      with:
-        name: calcrust-macos
-        path: target/release/calcrust
+        files: target/release/${{ matrix.asset_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
